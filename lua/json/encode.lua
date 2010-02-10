@@ -77,7 +77,15 @@ end
 --[[
 	Encode a value with a given encoding map and state
 ]]
-local function encodeWithMap(value, map, state)
+local function encodeWithMap(value, map, state, raw)
+	--Check for the __tojson metafield
+	if not raw then
+		local mt = getmetatable(value)
+		local __tojson = mt and mt.__tojson
+		if __tojson then
+			return __tojson(value, state.encode, state)
+		end
+	end
 	local t = type(value)
 	local encoderList = assert(map[t], "Failed to encode value, unhandled type: " .. t)
 	for _, encoder in ipairs(encoderList) do
@@ -94,16 +102,16 @@ local function getBaseEncoder(options)
 	local encoderMap = prepareEncodeMap(options)
 	if options.preProcess then
 		local preProcess = options.preProcess
-		return function(value, state)
+		return function(value, state, raw)
 			local ret = preProcess(value)
 			if nil ~= ret then
 				value = ret
 			end
-			return encodeWithMap(value, encoderMap, state)
+			return encodeWithMap(value, encoderMap, state, raw)
 		end
 	end
-	return function(value, state)
-		return encodeWithMap(value, encoderMap, state)
+	return function(value, state, raw)
+		return encodeWithMap(value, encoderMap, state, raw)
 	end
 end
 --[[
@@ -115,7 +123,7 @@ function getEncoder(options)
 	options = options and util_merge({}, defaultOptions, options) or defaultOptions
 	local encode = getBaseEncoder(options)
 
-	local function initialEncode(value)
+	local function initialEncode(value, raw)
 		if options.initialObject then
 			local errorMessage = "Invalid arguments: expects a JSON Object or Array at the root"
 			assert(type(value) == 'table' and not isCall(value, options), errorMessage)
@@ -134,7 +142,7 @@ function getEncoder(options)
 			already_encoded = alreadyEncoded, -- To unmark encoding when moving up stack
 			outputEncoder = outputEncoder
 		}
-		local ret = encode(value, state)
+		local ret = encode(value, state, raw)
 		if nil ~= ret then
 			return outputEncoder.simple and outputEncoder.simple(ret) or ret
 		end
@@ -148,8 +156,8 @@ end
 	check_unique -- used by inner encoders to make sure value is unique
 	already_encoded -- used to unmark a value as unique
 ]]
-function encode(data, options)
-	return getEncoder(options)(data)
+function encode(data, options, raw)
+	return getEncoder(options)(data, raw)
 end
 
 local mt = getmetatable(_M) or {}
