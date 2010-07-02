@@ -10,8 +10,34 @@ local string_char = require("string").char
 
 local error = error
 local setmetatable = setmetatable
-
+local table_concat = require("table").concat
 module("json.decode.util")
+local function build_report(msg)
+	local fmt = msg:gsub("%%", "%%%%") .. " @ character: %i %i:%i [%s] line:\n%s"
+	return lpeg.P(function(data, pos)
+		local line, line_index, bad_char, last_line = get_invalid_character_info(data, pos)
+		local text = fmt:format(pos, line, line_index, bad_char, last_line)
+		error(text)
+	end)
+end
+function unexpected()
+	local msg = "unexpected character"
+	return build_report(msg)
+end
+function expected(...)
+	local items = {...}
+	local msg
+	if #items > 1 then
+		msg = "expected one of '" .. table_concat(items, "','") .. "'"
+	else
+		msg = "expected '" .. items[1] .. "'"
+	end
+	return build_report(msg)
+end
+function denied(item, option)
+	local msg = ("'%s' denied by option set '%s'"):format(item, option)
+	return build_report(msg)
+end
 
 -- 09, 0A, 0B, 0C, 0D, 20
 ascii_space = lpeg.S("\t\n\v\f\r ")

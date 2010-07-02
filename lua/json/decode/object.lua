@@ -58,12 +58,16 @@ local function buildCapture(options, global_options)
 	local key = string_type
 	if options.identifier then
 		key = key + lpeg.C(util.identifier)
+	else
+		key = key + #lpeg.C(util.identifier) * util.denied("identifier key", "object.identifier")
 	end
 	if options.number then
 		key = key + integer_type
+	else
+		key = key + #integer_type * util.denied("numeric key", "object.number")
 	end
 	local objectItems
-	local objectItem = (key * ignored * lpeg.P(":") * ignored * value_type)
+	local objectItem = key * ignored * (lpeg.P(":") + util.expected(":")) * ignored * (value_type + util.expected("value"))
 	-- BEGIN LPEG < 0.9 SUPPORT
 	if DecimalLpegVersion < 0.9 then
 		objectItems = buildItemSequence(objectItem / applyObjectKey, ignored)
@@ -79,8 +83,10 @@ local function buildCapture(options, global_options)
 	capture = capture * objectItems * ignored
 	if options.trailingComma then
 		capture = capture * (lpeg.P(",") + 0) * ignored
+	else
+		capture = capture * ((#(lpeg.P(",") * ignored * lpeg.P("]"))) * util.denied("Trailing comma", "object.trailingComma") + 0) * ignored
 	end
-	capture = capture * lpeg.P("}")
+	capture = capture * (lpeg.P("}") + util.expected("}"))
 	return capture
 end
 

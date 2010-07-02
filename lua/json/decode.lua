@@ -77,7 +77,7 @@ local function buildDecoder(mode)
 	local object_type = lpeg.V(util.types.OBJECT)
 	local array_type = lpeg.V(util.types.ARRAY)
 	local grammar = {
-		[1] = mode.initialObject and (ignored * (object_type + array_type)) or value_type
+		[1] = mode.initialObject and (ignored * (object_type + array_type + util.expected("object", "array"))) or (value_type + util.expected("value"))
 	}
 	for _, name in pairs(modulesToLoad) do
 		local mod = loadedModules[name]
@@ -85,7 +85,7 @@ local function buildDecoder(mode)
 	end
 	-- HOOK VALUE TYPE WITH WHITESPACE
 	grammar[value_id] = ignored * grammar[value_id] * ignored
-	grammar = lpeg.P(grammar) * ignored * lpeg.Cp() * -1
+	grammar = lpeg.P(grammar) * ignored * lpeg.Cp() * (lpeg.P(-1) + util.unexpected())
 	return function(data)
 		local ret, next_index = lpeg.match(grammar, data)
 		assert(nil ~= next_index, "Invalid JSON data")

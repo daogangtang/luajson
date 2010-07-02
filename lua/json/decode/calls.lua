@@ -73,7 +73,7 @@ local function buildDefinedCaptures(argumentCapture, defs)
 				return (inner_func(...))
 			end
 		end
-		local newCapture = (nameCallCapture * argumentCapture) / func * ")"
+		local newCapture = (nameCallCapture * argumentCapture) / func * (")" + util.expected(")"))
 		if not callCapture then
 			callCapture = newCapture
 		else
@@ -90,7 +90,7 @@ local function buildCapture(options)
 	end
 	-- Allow zero or more arguments separated by commas
 	local value = lpeg.V(util.types.VALUE)
-	local argumentCapture = (value * (lpeg.P(",") *  value)^0) + 0
+	local argumentCapture = (value * (lpeg.P(",") * (value + util.expected("value")))^0) + 0
 	local callCapture = buildDefinedCaptures(argumentCapture, options.defs)
 	if options.allowUndefined then
 		local function func(name, ...)
@@ -98,7 +98,7 @@ local function buildCapture(options)
 		end
 		-- Identifier-type-match
 		local nameCallCapture = lpeg.C(util.identifier) * "("
-		local newCapture = (nameCallCapture * argumentCapture) / func * ")"
+		local newCapture = (nameCallCapture * argumentCapture) / func * (")" + util.expected(")"))
 		if not callCapture then
 			callCapture = newCapture
 		else

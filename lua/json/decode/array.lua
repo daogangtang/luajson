@@ -47,8 +47,10 @@ local function buildCapture(options, global_options)
 		* arrayElements * ignored
 	if options.trailingComma then
 		capture = capture * (lpeg.P(",") + 0) * ignored
+	else
+		capture = capture * ((#(lpeg.P(",") * ignored * lpeg.P("]"))) * util.denied("Trailing comma", "array.trailingComma") + 0) * ignored
 	end
-	capture = capture * lpeg.P("]")
+	capture = capture * (lpeg.P("]") + util.expected("]"))
 	return capture
 end
 
