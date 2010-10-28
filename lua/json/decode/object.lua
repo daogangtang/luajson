@@ -70,13 +70,21 @@ local function buildCapture(options, global_options)
 	local objectItem = key * ignored * (lpeg.P(":") + util.expected(":")) * ignored * (value_type + util.expected("value"))
 	-- BEGIN LPEG < 0.9 SUPPORT
 	if DecimalLpegVersion < 0.9 then
-		objectItems = buildItemSequence(objectItem / applyObjectKey, ignored)
+		local set_key = applyObjectKey
+		if options.setObjectKey then
+			local setObjectKey = options.setObjectKey
+			set_key = function(tab, key, val)
+				setObjectKey(tab, key, val)
+				return tab
+			end
+		end
+
+		objectItems = buildItemSequence(objectItem / set_key, ignored)
 		objectItems = lpeg.Ca(lpeg.Cc(false) / initObject * objectItems)
-		-- TODO: support options.setObjectKey?
 	-- END LPEG < 0.9 SUPPORT
 	else
 		objectItems = buildItemSequence(lpeg.Cg(objectItem), ignored)
-		objectItems = lpeg.Cf(lpeg.Ct(0) * objectItems, global_options.setObjectKey or rawset)
+		objectItems = lpeg.Cf(lpeg.Ct(0) * objectItems, options.setObjectKey or rawset)
 	end
 
 
