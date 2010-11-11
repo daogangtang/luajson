@@ -36,7 +36,12 @@ function expected(...)
 	return build_report(msg)
 end
 function denied(item, option)
-	local msg = ("'%s' denied by option set '%s'"):format(item, option)
+	local msg
+	if option then
+		msg = ("'%s' denied by option set '%s'"):format(item, option)
+	else
+		msg = ("'%s' denied"):format(item)
+	end
 	return build_report(msg)
 end
 

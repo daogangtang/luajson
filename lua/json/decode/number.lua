@@ -12,7 +12,10 @@ module("json.decode.number")
 local digit  = lpeg.R("09")
 local digits = digit^1
 
-int = (lpeg.P('-') + 0) * (lpeg.R("19") * digits + digit)
+-- Illegal octal declaration
+local illegal_octal_detect = #(lpeg.P('0') * digits) * util.denied("Octal numbers")
+
+int = (lpeg.P('-') + 0) * (lpeg.R("19") * digits + illegal_octal_detect + digit)
 local int = int
 
 local frac = lpeg.P('.') * digits
