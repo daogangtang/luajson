@@ -50,7 +50,15 @@ local function buildCapture(options, global_options)
 	else
 		capture = capture * ((#(lpeg.P(",") * ignored * lpeg.P("]"))) * util.denied("Trailing comma", "array.trailingComma") + 0) * ignored
 	end
-	capture = capture * (lpeg.P("]") + util.expected("]"))
+	-- Detect completion
+	local completion = lpeg.P("]")
+	-- Detect early termination
+	completion = completion + -1 * util.expected("]")
+	-- Detect unexpected ':' or ';' at end
+	completion = completion + #lpeg.S(':;') * util.unexpected()
+	-- Detect other invalid character
+	completion = completion + util.expected("]", "value")
+	capture = capture * completion
 	return capture
 end
 
