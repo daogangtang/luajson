@@ -82,15 +82,30 @@ local function buildDecoder(mode)
 	local grammar = {
 		[1] = mode.initialObject and (ignored * (object_type + array_type + util.expected("object", "array"))) or (value_type + util.expected("value"))
 	}
+	-- Additional state storage for modules
+	local state = {}
 	for _, name in pairs(modulesToLoad) do
 		local mod = loadedModules[name]
-		mod.load_types(mode[name], mode, grammar)
+		mod.load_types(mode[name], mode, grammar, state)
 	end
 	-- HOOK VALUE TYPE WITH WHITESPACE
 	grammar[value_id] = ignored * grammar[value_id] * ignored
-	grammar = lpeg.P(grammar) * ignored * lpeg.Cp() * (lpeg.P(-1) + util.unexpected())
+	local compiled_grammar = lpeg.P(grammar) * ignored
+	-- If match-time-capture is supported, implement Cmt workaround for deep captures
+	if lpeg.Cmt then
+		if mode.initialObject then
+			-- Patch the grammar and recompile for VALUE usage
+			grammar[1] = value_type
+			state.VALUE_MATCH = lpeg.P(grammar) * ignored
+		else
+			state.VALUE_MATCH = compiled_grammar
+		end
+	end
+	-- Only add terminator & pos capture for final grammar since it is expected that there is extra data
+	-- when using VALUE_MATCH internally
+	compiled_grammar = compiled_grammar * lpeg.Cp() * (lpeg.P(-1) + util.unexpected())
 	local decoder = function(data)
-		local ret, next_index = lpeg.match(grammar, data)
+		local ret, next_index = lpeg.match(compiled_grammar, data)
 		assert(nil ~= next_index, "Invalid JSON data")
 		return ret
 	end
